@@ -5,11 +5,13 @@ import pandas as pd
 
 from agent.coach import run_daily_coach, apply_feedback
 from agent.learning import get_learning_state
+from agent.llm import get_llm_status
 from agent.progress import summarize_progress
 from agent.utility import validate_input, INPUT_LIMITS
 from database.db import (
     create_user,
     create_tables,
+    fetch_learning_history,
     fetch_recent_health_rows,
     get_coaching_state,
     get_user_profile,
@@ -21,7 +23,13 @@ create_tables()
 
 st.set_page_config(page_title="Health Coach Agent", page_icon="💪", layout="wide")
 st.title("Personalized Health Coaching Agent")
-st.caption("Utility-based coaching with perception → reasoning → action → learning. (Utility is internal; you see plans + reminders.)")
+st.caption("Utility-based coaching with perception -> reasoning -> action -> learning, with visible utility diagnostics and optional LLM-enhanced motivation.")
+
+llm_enabled, llm_status_text = get_llm_status()
+if llm_enabled:
+    st.success(f"LLM status: {llm_status_text}")
+else:
+    st.warning(f"LLM status: {llm_status_text}")
 
 if "last_response" not in st.session_state:
     st.session_state.last_response = None
@@ -29,6 +37,8 @@ if "active_user_id" not in st.session_state:
     st.session_state.active_user_id = 1
 if "feedback_status" not in st.session_state:
     st.session_state.feedback_status = None
+if "demo_results" not in st.session_state:
+    st.session_state.demo_results = []
 
 with st.sidebar:
     st.subheader("User")
@@ -103,10 +113,11 @@ with st.sidebar:
     st.metric("Exercise goal", f'{coaching["exercise_goal"]} min')
     st.metric("Streak", f'{coaching["streak"]} days')
 
-tab_checkin, tab_plan, tab_progress = st.tabs(["Daily check‑in", "Coach plan", "Progress"])
+tab_checkin, tab_plan, tab_progress = st.tabs(["📝 Daily check‑in", "🧠 Coach plan", "📈 Progress"])
 
 with tab_checkin:
     st.subheader("Daily check‑in (perception)")
+    st.caption("Enter today’s values and generate a personalized action plan.")
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         steps = st.number_input("Steps", 0, 100000, value=0)
@@ -117,7 +128,7 @@ with tab_checkin:
     with c4:
         exercise = st.number_input("Exercise (minutes)", 0, 720, value=0)
 
-    if st.button("Coach me today"):
+    if st.button("Coach me today", type="primary"):
         raw_today = {"steps": steps, "sleep": sleep, "water": water, "exercise": exercise}
         bounded_today = validate_input(raw_today)
         capped_fields: list[str] = []
@@ -141,6 +152,47 @@ with tab_checkin:
         st.session_state.last_response = resp
         st.success("Plan generated. Go to the Coach plan tab.")
 
+    st.divider()
+    st.subheader("Simulator demo mode")
+    st.caption("Runs a 5-day scripted simulation automatically to demonstrate autonomous loop behavior.")
+    if st.button("Run 5-day simulation"):
+        scripted_days = [
+            {"steps": 3200, "sleep": 5.2, "water": 3, "exercise": 8, "adherence": 0, "rating": 2, "feedback": "Too hard today and busy schedule."},
+            {"steps": 4200, "sleep": 6.1, "water": 4, "exercise": 12, "adherence": 0, "rating": 2, "feedback": "Still difficult, reduce intensity."},
+            {"steps": 6100, "sleep": 6.8, "water": 6, "exercise": 18, "adherence": 1, "rating": 4, "feedback": "More manageable now."},
+            {"steps": 7300, "sleep": 7.1, "water": 7, "exercise": 24, "adherence": 1, "rating": 4, "feedback": "Good plan and easier to follow."},
+            {"steps": 8200, "sleep": 7.5, "water": 8, "exercise": 30, "adherence": 1, "rating": 5, "feedback": "Great progress, keep this style."},
+        ]
+        demo_rows = []
+        for idx, day in enumerate(scripted_days, start=1):
+            resp = run_daily_coach(
+                user_id=active_user_id,
+                today={k: day[k] for k in ["steps", "sleep", "water", "exercise"]},
+            )
+            updated = apply_feedback(
+                user_id=active_user_id,
+                priorities=resp.priorities,
+                adherence=int(day["adherence"]),
+                rating=int(day["rating"]),
+                text=str(day["feedback"]),
+            )
+            demo_rows.append(
+                {
+                    "day": idx,
+                    "utility": float(resp.utility or 0.0),
+                    "priorities": ", ".join(resp.priorities) if resp.priorities else "Maintenance",
+                    "threshold_after_feedback": float(updated.get("threshold", 0.75)),
+                    "feedback_rating": int(day["rating"]),
+                }
+            )
+            st.session_state.last_response = resp
+        st.session_state.demo_results = demo_rows
+        st.success("Simulation complete. Review outcomes below and in Progress tab.")
+
+    if st.session_state.demo_results:
+        st.write("**Latest simulation run (5 days):**")
+        st.dataframe(pd.DataFrame(st.session_state.demo_results), use_container_width=True)
+
 with tab_plan:
     st.subheader("Coach plan (reasoning → action)")
     resp = st.session_state.last_response
@@ -156,6 +208,36 @@ with tab_plan:
         st.write(f"**Today’s focus:** {', '.join(resp.priorities) if resp.priorities else 'Maintenance'}")
         st.write(f"**Daily trend:** {resp.trend}")
         st.write(f"**Coach message:** {resp.motivation}")
+        if getattr(resp, "utility", None) is not None and getattr(resp, "learning_state", None):
+            util_col, thr_col, fail_col = st.columns(3)
+            with util_col:
+                st.metric("Current utility score", f'{float(resp.utility):.2f}')
+            with thr_col:
+                st.metric("Decision threshold", f'{float(resp.learning_state.get("threshold", 0.75)):.2f}')
+            with fail_col:
+                st.metric("Failure count", f'{int(resp.learning_state.get("failure_count", 0))}')
+            weight_df = pd.DataFrame(
+                [
+                    {
+                        "metric": k.title(),
+                        "weight": float(v),
+                    }
+                    for k, v in (resp.learning_state.get("weights", {}) or {}).items()
+                ]
+            )
+            if not weight_df.empty:
+                st.caption("Learned utility weights")
+                st.bar_chart(weight_df.set_index("metric"))
+        with st.expander("Show utility-based decision evidence"):
+            st.write(
+                {
+                    "current_utility": float(resp.utility or 0.0),
+                    "threshold": float((resp.learning_state or {}).get("threshold", 0.75)),
+                    "weights": (resp.learning_state or {}).get("weights", {}),
+                    "priorities": resp.priorities,
+                    "trend": resp.trend,
+                }
+            )
         if getattr(resp, "checkin_advice", None):
             for tip in resp.checkin_advice:
                 st.warning(tip)
@@ -188,7 +270,7 @@ with tab_plan:
             rating = st.slider("How helpful was this plan?", min_value=1, max_value=5, value=4)
         feedback_text = st.text_area("What worked / what didn’t? (this updates future plans)", value="")
 
-        if st.button("Submit feedback"):
+        if st.button("Submit feedback", type="primary"):
             adh_val = None
             if adherence == "Yes":
                 adh_val = 1
@@ -211,8 +293,8 @@ with tab_plan:
                 st.write("**Updated targets:**")
                 st.write(updated["coaching"])
 
-                st.write("**Closed-loop evidence (before -> after):**")
-                st.json(
+                with st.expander("Closed-loop evidence (before -> after)"):
+                    st.json(
                     {
                         "weights": {
                             "before": before_learning.get("weights", {}),
@@ -231,12 +313,13 @@ with tab_plan:
                             "after": after_targets,
                         },
                     }
-                )
+                    )
             except Exception as e:
                 st.session_state.feedback_status = {"kind": "error", "text": f"Feedback failed to save: {e}"}
 
 with tab_progress:
     st.subheader("Monitoring (progress over time)")
+    st.caption("Tracks outcome trends and how the utility model adapts from feedback.")
     active_user_id = int(st.session_state.active_user_id)
     rows = fetch_recent_health_rows(user_id=active_user_id, limit=21)
     coaching = get_coaching_state(user_id=active_user_id)
@@ -286,3 +369,13 @@ with tab_progress:
                 st.progress(pct / 100.0)
                 st.caption(f"{pct:.0f}% of goal - {metric_status.get(metric, 'Unknown')}")
         st.dataframe(rows, use_container_width=True)
+
+    learning_rows = fetch_learning_history(user_id=active_user_id, limit=40)
+    if learning_rows:
+        st.divider()
+        st.write("**Weight evolution (learning history)**")
+        learning_rows = list(reversed(learning_rows))
+        ldf = pd.DataFrame(learning_rows)
+        st.line_chart(ldf[["steps", "sleep", "water", "exercise"]])
+        st.caption("Threshold adaptation over time")
+        st.line_chart(ldf[["threshold"]])

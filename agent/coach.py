@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from agent.decision import find_priority
 from agent.learning import get_learning_state, update_from_feedback
+from agent.llm import build_llm_motivation
 from agent.planner import generate_diet_plan, generate_exercise_plan
 from agent.progress import summarize_progress
 from agent.reminder import generate_reminder
@@ -35,6 +36,8 @@ class CoachResponse:
     checkin_advice: list[str] | None = None
     reflection: dict | None = None
     progress: dict | None = None
+    utility: float | None = None
+    learning_state: dict | None = None
 
 
 def _motivation(priorities: list[str], trend: str, streak: int) -> str:
@@ -80,7 +83,7 @@ def run_daily_coach(*, user_id: int = 1, today: dict) -> CoachResponse:
     learning = get_learning_state(user_id=user_id)
     preferences = learning.get("preferences") or {}
 
-    # Internal utility (never displayed directly in UI)
+    # Internal utility used for action scoring and UI diagnostics.
     _utility = calculate_utility(normalized, learning["weights"])
 
     previous = get_latest_health_row(user_id=user_id)
@@ -143,6 +146,14 @@ def run_daily_coach(*, user_id: int = 1, today: dict) -> CoachResponse:
         coaching=coaching,
     )
     motivation = _motivation(priorities, trend, int(coaching.get("streak", 0)))
+    motivation = build_llm_motivation(
+        user_name=str(profile.get("name") or ""),
+        goal=str(profile.get("goal") or ""),
+        priorities=priorities,
+        trend=trend,
+        fallback_message=motivation,
+        utility=float(_utility),
+    )
     checkin_advice = _checkin_guardrail_advice(create, coaching)
 
     # Reflect (informational): summarize whether progress looks normal.
@@ -211,6 +222,12 @@ def run_daily_coach(*, user_id: int = 1, today: dict) -> CoachResponse:
         checkin_advice=checkin_advice,
         reflection=reflection_payload,
         progress={"verdict": progress.verdict, "message": progress.message, "stats": progress.stats},
+        utility=float(_utility),
+        learning_state={
+            "weights": learning.get("weights", {}),
+            "threshold": float(learning.get("threshold", 0.75)),
+            "failure_count": int(learning.get("failure_count", 0)),
+        },
     )
 
 

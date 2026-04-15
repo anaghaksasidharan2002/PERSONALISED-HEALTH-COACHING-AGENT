@@ -9,6 +9,7 @@ Perception -> Reasoning -> Action -> Learning.
 - Collects daily check-in data: steps, sleep, water, exercise
 - Computes an internal utility score from normalized metrics and learned weights
 - Generates personalized exercise and nutrition plans
+- Uses Gemini (via `google-generativeai`) for personalized motivation text with safe fallback
 - Learns from feedback (`adherence`, `rating`, free-text notes)
 - Updates goals, priorities, and preferences over time
 
@@ -49,6 +50,12 @@ Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 streamlit run app.py
 ```
 
+Optional: create a `.env` file in project root to enable Gemini calls:
+
+```env
+GOOGLE_API_KEY=your_api_key_here
+```
+
 Then open the local URL shown in terminal (usually `http://localhost:8501`).
 
 ## Setup (macOS/Linux)
@@ -75,8 +82,10 @@ The app displays before/after evidence after feedback submission so learning cha
 - Utility-based scoring (`agent/utility.py`)
 - Adaptive priorities/thresholds (`agent/decision.py`, `agent/learning.py`)
 - Personalized plan generation (`agent/planner.py`)
+- LLM-enhanced motivation with fallback (`agent/llm.py`)
 - Progress analytics over all 4 metrics (`agent/progress.py`)
 - Input safety bounds with coaching guidance for rough values
+- Simulator demo mode (5 scripted days) to show autonomous episodes in UI
 
 ## Quick Validation Checklist
 
@@ -84,6 +93,8 @@ The app displays before/after evidence after feedback submission so learning cha
 - Submit strong check-in + positive feedback -> goals rise gradually, streak increases.
 - Enter high sleep (e.g., 13h) -> accepted with corrective sleep-cycle guidance.
 - Check Progress tab -> separate trends for steps, sleep, water, exercise.
+- Click "Run 5-day simulation" -> observe automated episode + learning updates.
+- In Coach plan tab -> verify visible utility score, threshold, and weight chart.
 
 ## Notes
 

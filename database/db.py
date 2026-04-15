@@ -117,6 +117,20 @@ def create_tables():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS learning_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        steps_weight REAL NOT NULL,
+        sleep_weight REAL NOT NULL,
+        water_weight REAL NOT NULL,
+        exercise_weight REAL NOT NULL,
+        threshold REAL NOT NULL,
+        failure_count INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
     # Hard migration: old single-user tables used CHECK(id=1) which blocks multi-user inserts.
     # Rebuild them into multi-user friendly tables and copy legacy row to user_id=1.
     legacy_profile_sql = _table_sql(cursor, "user_profile")
@@ -196,6 +210,7 @@ def create_tables():
     cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_coaching_state_user ON coaching_state(user_id)")
     cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_preferences_user_key ON user_preferences(user_id, key)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_health_data_user_date ON health_data(user_id, date)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_learning_history_user_date ON learning_history(user_id, created_at)")
 
     # Ensure there is at least one user (id=1) for legacy single-user data.
     cursor.execute("INSERT OR IGNORE INTO users (id, display_name) VALUES (1, 'Default user')")
@@ -535,6 +550,67 @@ def update_learning_state_row(
         )
     conn.commit()
     conn.close()
+
+
+def insert_learning_history_row(
+    *,
+    user_id: int = 1,
+    steps_weight: float,
+    sleep_weight: float,
+    water_weight: float,
+    exercise_weight: float,
+    threshold: float,
+    failure_count: int,
+):
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO learning_history
+        (user_id, steps_weight, sleep_weight, water_weight, exercise_weight, threshold, failure_count)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            int(user_id),
+            float(steps_weight),
+            float(sleep_weight),
+            float(water_weight),
+            float(exercise_weight),
+            float(threshold),
+            int(failure_count),
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
+def fetch_learning_history(*, user_id: int = 1, limit: int = 30):
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT steps_weight, sleep_weight, water_weight, exercise_weight, threshold, failure_count, created_at
+        FROM learning_history
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        LIMIT ?
+        """,
+        (int(user_id), int(limit)),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return [
+        {
+            "steps": r[0],
+            "sleep": r[1],
+            "water": r[2],
+            "exercise": r[3],
+            "threshold": r[4],
+            "failure_count": r[5],
+            "created_at": r[6],
+        }
+        for r in rows
+    ]
 
 def get_coaching_state(*, user_id: int = 1):
     conn = connect()
