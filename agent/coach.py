@@ -5,7 +5,10 @@ from dataclasses import dataclass
 
 from agent.decision import find_priority
 from agent.learning import get_learning_state, update_from_feedback
+<<<<<<< HEAD
 from agent.llm import build_llm_motivation
+=======
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
 from agent.planner import generate_diet_plan, generate_exercise_plan
 from agent.progress import summarize_progress
 from agent.reminder import generate_reminder
@@ -36,8 +39,11 @@ class CoachResponse:
     checkin_advice: list[str] | None = None
     reflection: dict | None = None
     progress: dict | None = None
+<<<<<<< HEAD
     utility: float | None = None
     learning_state: dict | None = None
+=======
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
 
 
 def _motivation(priorities: list[str], trend: str, streak: int) -> str:
@@ -83,7 +89,11 @@ def run_daily_coach(*, user_id: int = 1, today: dict) -> CoachResponse:
     learning = get_learning_state(user_id=user_id)
     preferences = learning.get("preferences") or {}
 
+<<<<<<< HEAD
     # Internal utility used for action scoring and UI diagnostics.
+=======
+    # Internal utility (never displayed directly in UI)
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
     _utility = calculate_utility(normalized, learning["weights"])
 
     previous = get_latest_health_row(user_id=user_id)
@@ -146,6 +156,7 @@ def run_daily_coach(*, user_id: int = 1, today: dict) -> CoachResponse:
         coaching=coaching,
     )
     motivation = _motivation(priorities, trend, int(coaching.get("streak", 0)))
+<<<<<<< HEAD
     motivation = build_llm_motivation(
         user_name=str(profile.get("name") or ""),
         goal=str(profile.get("goal") or ""),
@@ -154,6 +165,8 @@ def run_daily_coach(*, user_id: int = 1, today: dict) -> CoachResponse:
         fallback_message=motivation,
         utility=float(_utility),
     )
+=======
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
     checkin_advice = _checkin_guardrail_advice(create, coaching)
 
     # Reflect (informational): summarize whether progress looks normal.
@@ -222,12 +235,15 @@ def run_daily_coach(*, user_id: int = 1, today: dict) -> CoachResponse:
         checkin_advice=checkin_advice,
         reflection=reflection_payload,
         progress={"verdict": progress.verdict, "message": progress.message, "stats": progress.stats},
+<<<<<<< HEAD
         utility=float(_utility),
         learning_state={
             "weights": learning.get("weights", {}),
             "threshold": float(learning.get("threshold", 0.75)),
             "failure_count": int(learning.get("failure_count", 0)),
         },
+=======
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
     )
 
 

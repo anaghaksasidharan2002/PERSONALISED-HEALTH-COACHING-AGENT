@@ -3,7 +3,10 @@ from __future__ import annotations
 from database.db import (
     get_learning_state_row,
     update_learning_state_row,
+<<<<<<< HEAD
     insert_learning_history_row,
+=======
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
     get_coaching_state,
     update_coaching_state,
     get_user_preferences,
@@ -156,9 +159,13 @@ def update_from_feedback(
         merged_kv["avoid_activities"] = _json.dumps(sorted(avoid_now))
         upsert_user_preference(user_id=user_id, key="avoid_activities", value=merged_kv["avoid_activities"])
 
+<<<<<<< HEAD
     # Weight learning:
     # - If a dimension repeatedly fails (negative feedback), increase its weight so it gets more coaching attention.
     # - If the user is succeeding comfortably, reduce that dimension slightly to shift attention toward weaker areas.
+=======
+    # Weight learning.
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
     for p in priorities:
         key = p.strip().lower()
         if key == "steps":
@@ -173,9 +180,15 @@ def update_from_feedback(
             continue
 
         if is_positive and not mentions_hard:
+<<<<<<< HEAD
             weights[metric] = max(0.05, float(weights[metric]) - (lr * 0.5))
         elif is_negative or mentions_hard:
             weights[metric] = float(weights[metric]) + lr
+=======
+            weights[metric] = float(weights[metric]) + lr
+        elif is_negative or mentions_hard:
+            weights[metric] = max(0.05, float(weights[metric]) - lr)
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
 
     weights = _renormalize(weights)
 
@@ -216,6 +229,7 @@ def update_from_feedback(
         exercise_goal=exercise_goal,
         streak=streak,
     )
+<<<<<<< HEAD
     insert_learning_history_row(
         user_id=user_id,
         steps_weight=weights["steps"],
@@ -225,6 +239,8 @@ def update_from_feedback(
         threshold=threshold,
         failure_count=failure_count,
     )
+=======
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
 
     return {
         "weights": weights,

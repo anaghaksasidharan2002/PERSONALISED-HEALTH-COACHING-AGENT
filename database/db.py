@@ -117,6 +117,7 @@ def create_tables():
     )
     """)
 
+<<<<<<< HEAD
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS learning_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -131,6 +132,8 @@ def create_tables():
     )
     """)
 
+=======
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
     # Hard migration: old single-user tables used CHECK(id=1) which blocks multi-user inserts.
     # Rebuild them into multi-user friendly tables and copy legacy row to user_id=1.
     legacy_profile_sql = _table_sql(cursor, "user_profile")
@@ -210,7 +213,10 @@ def create_tables():
     cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_coaching_state_user ON coaching_state(user_id)")
     cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_preferences_user_key ON user_preferences(user_id, key)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_health_data_user_date ON health_data(user_id, date)")
+<<<<<<< HEAD
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_learning_history_user_date ON learning_history(user_id, created_at)")
+=======
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
 
     # Ensure there is at least one user (id=1) for legacy single-user data.
     cursor.execute("INSERT OR IGNORE INTO users (id, display_name) VALUES (1, 'Default user')")
@@ -551,6 +557,7 @@ def update_learning_state_row(
     conn.commit()
     conn.close()
 
+<<<<<<< HEAD
 
 def insert_learning_history_row(
     *,
@@ -612,6 +619,8 @@ def fetch_learning_history(*, user_id: int = 1, limit: int = 30):
         for r in rows
     ]
 
+=======
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
 def get_coaching_state(*, user_id: int = 1):
     conn = connect()
     cur = conn.cursor()

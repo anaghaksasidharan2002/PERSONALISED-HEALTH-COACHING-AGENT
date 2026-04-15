@@ -5,13 +5,19 @@ import pandas as pd
 
 from agent.coach import run_daily_coach, apply_feedback
 from agent.learning import get_learning_state
+<<<<<<< HEAD
 from agent.llm import get_llm_status
+=======
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
 from agent.progress import summarize_progress
 from agent.utility import validate_input, INPUT_LIMITS
 from database.db import (
     create_user,
     create_tables,
+<<<<<<< HEAD
     fetch_learning_history,
+=======
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
     fetch_recent_health_rows,
     get_coaching_state,
     get_user_profile,
@@ -23,6 +29,7 @@ create_tables()
 
 st.set_page_config(page_title="Health Coach Agent", page_icon="💪", layout="wide")
 st.title("Personalized Health Coaching Agent")
+<<<<<<< HEAD
 st.caption("Utility-based coaching with perception -> reasoning -> action -> learning, with visible utility diagnostics and optional LLM-enhanced motivation.")
 
 llm_enabled, llm_status_text = get_llm_status()
@@ -30,6 +37,9 @@ if llm_enabled:
     st.success(f"LLM status: {llm_status_text}")
 else:
     st.warning(f"LLM status: {llm_status_text}")
+=======
+st.caption("Utility-based coaching with perception → reasoning → action → learning. (Utility is internal; you see plans + reminders.)")
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
 
 if "last_response" not in st.session_state:
     st.session_state.last_response = None
@@ -37,8 +47,11 @@ if "active_user_id" not in st.session_state:
     st.session_state.active_user_id = 1
 if "feedback_status" not in st.session_state:
     st.session_state.feedback_status = None
+<<<<<<< HEAD
 if "demo_results" not in st.session_state:
     st.session_state.demo_results = []
+=======
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
 
 with st.sidebar:
     st.subheader("User")
@@ -113,11 +126,18 @@ with st.sidebar:
     st.metric("Exercise goal", f'{coaching["exercise_goal"]} min')
     st.metric("Streak", f'{coaching["streak"]} days')
 
+<<<<<<< HEAD
 tab_checkin, tab_plan, tab_progress = st.tabs(["📝 Daily check‑in", "🧠 Coach plan", "📈 Progress"])
 
 with tab_checkin:
     st.subheader("Daily check‑in (perception)")
     st.caption("Enter today’s values and generate a personalized action plan.")
+=======
+tab_checkin, tab_plan, tab_progress = st.tabs(["Daily check‑in", "Coach plan", "Progress"])
+
+with tab_checkin:
+    st.subheader("Daily check‑in (perception)")
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         steps = st.number_input("Steps", 0, 100000, value=0)
@@ -128,7 +148,11 @@ with tab_checkin:
     with c4:
         exercise = st.number_input("Exercise (minutes)", 0, 720, value=0)
 
+<<<<<<< HEAD
     if st.button("Coach me today", type="primary"):
+=======
+    if st.button("Coach me today"):
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
         raw_today = {"steps": steps, "sleep": sleep, "water": water, "exercise": exercise}
         bounded_today = validate_input(raw_today)
         capped_fields: list[str] = []
@@ -152,6 +176,7 @@ with tab_checkin:
         st.session_state.last_response = resp
         st.success("Plan generated. Go to the Coach plan tab.")
 
+<<<<<<< HEAD
     st.divider()
     st.subheader("Simulator demo mode")
     st.caption("Runs a 5-day scripted simulation automatically to demonstrate autonomous loop behavior.")
@@ -193,6 +218,8 @@ with tab_checkin:
         st.write("**Latest simulation run (5 days):**")
         st.dataframe(pd.DataFrame(st.session_state.demo_results), use_container_width=True)
 
+=======
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
 with tab_plan:
     st.subheader("Coach plan (reasoning → action)")
     resp = st.session_state.last_response
@@ -208,6 +235,7 @@ with tab_plan:
         st.write(f"**Today’s focus:** {', '.join(resp.priorities) if resp.priorities else 'Maintenance'}")
         st.write(f"**Daily trend:** {resp.trend}")
         st.write(f"**Coach message:** {resp.motivation}")
+<<<<<<< HEAD
         if getattr(resp, "utility", None) is not None and getattr(resp, "learning_state", None):
             util_col, thr_col, fail_col = st.columns(3)
             with util_col:
@@ -238,6 +266,8 @@ with tab_plan:
                     "trend": resp.trend,
                 }
             )
+=======
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
         if getattr(resp, "checkin_advice", None):
             for tip in resp.checkin_advice:
                 st.warning(tip)
@@ -270,7 +300,11 @@ with tab_plan:
             rating = st.slider("How helpful was this plan?", min_value=1, max_value=5, value=4)
         feedback_text = st.text_area("What worked / what didn’t? (this updates future plans)", value="")
 
+<<<<<<< HEAD
         if st.button("Submit feedback", type="primary"):
+=======
+        if st.button("Submit feedback"):
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
             adh_val = None
             if adherence == "Yes":
                 adh_val = 1
@@ -293,8 +327,13 @@ with tab_plan:
                 st.write("**Updated targets:**")
                 st.write(updated["coaching"])
 
+<<<<<<< HEAD
                 with st.expander("Closed-loop evidence (before -> after)"):
                     st.json(
+=======
+                st.write("**Closed-loop evidence (before -> after):**")
+                st.json(
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
                     {
                         "weights": {
                             "before": before_learning.get("weights", {}),
@@ -313,13 +352,20 @@ with tab_plan:
                             "after": after_targets,
                         },
                     }
+<<<<<<< HEAD
                     )
+=======
+                )
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
             except Exception as e:
                 st.session_state.feedback_status = {"kind": "error", "text": f"Feedback failed to save: {e}"}
 
 with tab_progress:
     st.subheader("Monitoring (progress over time)")
+<<<<<<< HEAD
     st.caption("Tracks outcome trends and how the utility model adapts from feedback.")
+=======
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
     active_user_id = int(st.session_state.active_user_id)
     rows = fetch_recent_health_rows(user_id=active_user_id, limit=21)
     coaching = get_coaching_state(user_id=active_user_id)
@@ -369,6 +415,7 @@ with tab_progress:
                 st.progress(pct / 100.0)
                 st.caption(f"{pct:.0f}% of goal - {metric_status.get(metric, 'Unknown')}")
         st.dataframe(rows, use_container_width=True)
+<<<<<<< HEAD
 
     learning_rows = fetch_learning_history(user_id=active_user_id, limit=40)
     if learning_rows:
@@ -379,3 +426,5 @@ with tab_progress:
         st.line_chart(ldf[["steps", "sleep", "water", "exercise"]])
         st.caption("Threshold adaptation over time")
         st.line_chart(ldf[["threshold"]])
+=======
+>>>>>>> 1893ef1731c8d043cfbedb2c2aafaf2c2fac35aa
